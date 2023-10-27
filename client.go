@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	utils "github.com/sashabaranov/go-openai/internal"
+	utils "github.com/zjc17/go-openai/internal"
 )
 
 // Client is OpenAI GPT-3 API client.
@@ -87,8 +87,10 @@ func withContentType(contentType string) requestOption {
 
 func (c *Client) SetCustomHeaders(headers http.Header) *Client {
 	c.customHeaderRequestOption = func(args *requestOptions) {
-		for key, _ := range headers {
-			args.header.Set(key, headers.Get(key))
+		for key, values := range headers {
+			for _, value := range values {
+				args.header.Add(key, value)
+			}
 		}
 	}
 	return c
