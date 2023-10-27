@@ -16,8 +16,9 @@ import (
 type Client struct {
 	config ClientConfig
 
-	requestBuilder    utils.RequestBuilder
-	createFormBuilder func(io.Writer) utils.FormBuilder
+	requestBuilder            utils.RequestBuilder
+	createFormBuilder         func(io.Writer) utils.FormBuilder
+	customHeaderRequestOption requestOption
 }
 
 type Response interface {
@@ -52,6 +53,7 @@ func NewClientWithConfig(config ClientConfig) *Client {
 		createFormBuilder: func(body io.Writer) utils.FormBuilder {
 			return utils.NewFormBuilder(body)
 		},
+		customHeaderRequestOption: func(options *requestOptions) {},
 	}
 }
 
@@ -83,6 +85,15 @@ func withContentType(contentType string) requestOption {
 	}
 }
 
+func (c *Client) SetCustomHeaders(headers http.Header) *Client {
+	c.customHeaderRequestOption = func(args *requestOptions) {
+		for key, _ := range headers {
+			args.header.Set(key, headers.Get(key))
+		}
+	}
+	return c
+}
+
 func (c *Client) newRequest(ctx context.Context, method, url string, setters ...requestOption) (*http.Request, error) {
 	// Default Options
 	args := &requestOptions{
@@ -92,6 +103,7 @@ func (c *Client) newRequest(ctx context.Context, method, url string, setters ...
 	for _, setter := range setters {
 		setter(args)
 	}
+	c.customHeaderRequestOption(args)
 	req, err := c.requestBuilder.Build(ctx, method, url, args.body, args.header)
 	if err != nil {
 		return nil, err
